@@ -2,12 +2,49 @@
 use strict;
 use warnings;
 
-my $VERSION="0.2";
+package REST::TinyJSON;
+use URI;
+use LWP::UserAgent;
+use Carp qw(croak carp);
+use JSON qw(from_json);
 
-package FBOS::Client;
+sub new {
+    my $class = shift;
+
+    my $ua = LWP::UserAgent->new;
+
+    bless {
+        '_ua' => $ua,
+    }, $class;
+}
+
+sub ua {
+    my ($self)=@_;
+    return $self->{_ua};
+}
+
+sub GET {
+    my ($self,$uri,$header,$content) = @_;
+    my $req = HTTP::Request->new( "GET", $uri, $header, $content);
+    $req->content_length( $content ? length($content) : 0 );
+    return $self->ua->request($req);
+}
+
+sub POST {
+    my ($self,$uri,$header,$content) = @_;
+    my $req = HTTP::Request->new( "POST", $uri, $header, $content);
+    $req->content_length( length($content) ) if $content;
+    return $self->ua->request($req);
+}
+
+package FBOS::RestJSON;
+#simply a json rest client with prefix handling
+
+package FBOS::API;
+
+use Data::Dumper;
 use REST::Client;
 use JSON qw(from_json);
-our @ISA=qw/REST::Client/;
 
 my $endpoint = "http://mafreebox.freebox.fr";
 my $success;
@@ -59,12 +96,12 @@ use Data::Dumper;
 
 my $app_id="fr.freebox.lk";
 
-my $client = FBOS::Client->new();
-my $res=$client->POST( "/login/authorize/",
+my $client = FBOS->new();
+my $res=$client->POST( "/login/xauthorize/",
     to_json({
         app_id      => $app_id,
         app_name    => "FBPerl",
-        app_version => $VERSION,
+        app_version => "0.1",
         device_name => "debian",
         permissions => {
             downloader => "true", parental   => "true", explorer   => "true",
