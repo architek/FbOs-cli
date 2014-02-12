@@ -23,7 +23,6 @@ sub do_json {
     $type = "POST" unless $type;
     my $req = HTTP::Request->new( $type => "$endpoint/$url" );
     $req->header( 'Content-type'   => 'application/json' );
-    $req->header( 'Content-length' => length($content) );
     $req->content($content);
     $mech->request($req);
     from_json( $mech->content );
