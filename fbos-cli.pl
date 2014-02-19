@@ -7,11 +7,11 @@ package FBOS::Client;
 my $VERSION = "0.2";
 
 use LWP::UserAgent;
-use JSON qw(from_json to_json);
+use JSON qw/ from_json to_json /
 use Storable;
-use Digest::HMAC_SHA1 qw/hmac_sha1_hex/;
+use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
 
-my $endpoint = "http://mafreebox.freebox.fr";
+my $endpoint  = "http://mafreebox.freebox.fr";
 my $store     = "app_token";
 
 sub new {
@@ -140,7 +140,7 @@ sub session_token {
     my $challenge = $self->challenge();
     my $res = $self->POST("login/session/", undef,
         {
-            app_id => $self->app_id(),
+            app_id   => $self->app_id(),
             password => hmac_sha1_hex( $challenge->{challenge}, $self->{app_token}{app_token} )
         }
     );
@@ -217,4 +217,4 @@ my $app_name = "FBPerlTest";
 
 my $json=new FBOS::Client($app_id, $app_name);
 $json->connect;
-print Dumper $json->api_connection();
+print Dumper $json->api_connection;
