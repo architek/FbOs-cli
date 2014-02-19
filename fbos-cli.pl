@@ -7,7 +7,7 @@ package FBOS::Client;
 my $VERSION = "0.2";
 
 use LWP::UserAgent;
-use JSON qw/ from_json to_json /
+use JSON qw/ from_json to_json /;
 use Storable;
 use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
 
