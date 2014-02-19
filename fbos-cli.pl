@@ -11,7 +11,7 @@ use JSON qw(from_json to_json);
 use Storable;
 use Digest::HMAC_SHA1 qw/hmac_sha1_hex/;
 
-my $_endpoint = "http://mafreebox.freebox.fr";
+my $endpoint = "http://mafreebox.freebox.fr";
 my $store     = "app_token";
 
 sub new {
@@ -68,13 +68,13 @@ sub decode_api_response {
 
 sub api_version {
     my $self = shift;
-    my $req  = HTTP::Request->new( "GET", $_endpoint . "/api_version" );
+    my $req  = HTTP::Request->new( "GET", $endpoint . "/api_version" );
     my $res = $self->request($req);
     if ( $self->success() ) {
         my $res = $self->decode_json ( $res );
         die "Can't get api version" unless exists $res->{api_version} and exists $res->{api_base_url};
         my ($maj) = $res->{api_version} =~ /(\d*)\./;
-        $self->prefix( $_endpoint . $res->{api_base_url} . "v" . $maj . "/" );
+        $self->prefix( $endpoint . $res->{api_base_url} . "v" . $maj . "/" );
     }
     return $self->success();
 }
