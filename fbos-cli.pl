@@ -40,6 +40,15 @@ sub POST {
     return $self->success() ? $self->decode_api_response( $res ) : undef;
 }
 
+sub PUT {
+    my ($self,$uri,$header,$content) = @_;
+    $content = to_json($content) if defined $content;
+    my $req = HTTP::Request->new( "PUT", $self->prefix() . $uri, $header, $content);
+    $req->content_length( length($content) ) if defined $content;
+    my $res = $self->request($req);
+    return $self->success() ? $self->decode_api_response( $res ) : undef;
+}
+
 sub request {
     my ($self, $req) = @_;
     my $res  = $self->ua()->request($req);
@@ -56,8 +65,8 @@ sub decode_json {
 sub decode_api_response {
     my ($self, $response) = @_;
     my $api_response = $self->decode_json ( $response );
-    $self->{api_success} = $api_response->{success};
-    if ( $api_response->{success} ) {
+    $self->api_success( $api_response->{success} );
+    if ( $self->api_success() ) {
         return exists $api_response->{result} ? $api_response->{result} : undef;
     } else {
         $self->error_code( $api_response->{error_code} );
