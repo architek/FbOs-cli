@@ -10,6 +10,7 @@ use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
 use Storable;
 use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
+use MIME::Base64 qw/ encode_base64url decode_base64url encode_base64/;
 
 my $endpoint  = "http://mafreebox.freebox.fr";
 my $store     = "app_token";
@@ -49,6 +50,14 @@ sub PUT {
     return $self->success() ? $self->decode_api_response( $res ) : undef;
 }
 
+sub DELETE {
+    my ($self,$uri,$header) = @_;
+    my $req = HTTP::Request->new( "DELETE", $self->prefix() . $uri, $header);
+    my $res = $self->request($req);
+    return $self->success() ? $self->decode_api_response( $res ) : undef;
+}
+
+
 sub request {
     my ($self, $req) = @_;
     my $res  = $self->ua()->request($req);
@@ -59,6 +68,7 @@ sub request {
 
 sub decode_json {
     my ($self, $response) = @_;
+    #return from_json ( $response->decoded_content , {utf8 => 1});
     return from_json ( $response->decoded_content );
 }
 
@@ -166,14 +176,6 @@ sub connect {
     $self->ua->default_header( 'X-Fbx-App-Auth' => $self->{session_token}{session_token} );
 }
 
-sub api_connection {
-    my $self=shift;
-    my $res = $self->GET("connection/");
-    die "API Connection " , $self->status , "\n" unless $self->success();
-    die "API Connection " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
-    return $res;
-}
-
 sub ua {
     my ($self)=@_;
     return $self->{ua};
@@ -217,13 +219,103 @@ sub app_name {
     return $self->{app_name};
 }
 
+############# API
+sub api_connection {
+    my $self=shift;
+    my $res = $self->GET("connection/");
+    die "API Connection " , $self->status , "\n" unless $self->success();
+    die "API Connection " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+sub api_dl_stats {
+    my $self=shift;
+    my $res = $self->GET("downloads/stats");
+    die "DL Stats " , $self->status , "\n" unless $self->success();
+    die "DL Stats " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+sub api_fs_tasks {
+    my $self=shift;
+    my $res = $self->GET("fs/tasks");
+    die "FS Tasks " , $self->status , "\n" unless $self->success();
+    die "FS Tasks " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+sub api_ls_files {
+    my ($self, $path) = @_;
+    $path = encode_base64url( $path );
+    my $res = $self->GET("fs/ls/$path");
+    die "LS Files " , $self->status , "\n" unless $self->success();
+    die "LS Files " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    $_->{path} = decode_base64url( $_->{path} ) for @$res;
+    return $res;
+}
+
+sub api_airmedia_receiver {
+    my ($self, $action, $type, $media) = @_;
+    
+    die "AirMedia Receiver only accepts type photo or video\n" unless $type eq "video" or $type eq "photo";
+    $media = encode_base64($media,"") if defined $media and $type eq "photo";
+    my $res = $self->POST("airmedia/receivers/Freebox Player/", undef,
+        {
+            action => $action,
+            media_type => $type,
+            media => $media,
+        }
+    );
+    die "AirMedia Receiver " , $self->status , "\n" unless $self->success();
+    die "AirMedia Receiver " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+}
+
+sub api_call_log {
+    my ($self, $id) = @_;
+    my $url = "call/log/";
+    $url .= $id if defined $id;
+    my $res = $self->GET("$url");
+    die "Call Log " , $self->status , "\n" unless $self->success();
+    die "Call Log " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+sub api_call_delete {
+    my ($self, $id) = @_;
+    my $res = $self->DELETE("call/log/$id");
+    die "Call Delete " , $self->status , "\n" unless $self->success();
+    die "Call Delete " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+sub api_lan_browser {
+    my ($self, $if) = @_;
+    my $url = "lan/browser/";
+    $url .= defined $if ? "$if/" : "interfaces/";
+    my $res = $self->GET($url);
+    die "Lan Browser " , $self->status , "\n" unless $self->success();
+    die "Lan Browser " , $self->error_msg , "[", $self->error_code, "]", "\n" unless $self->api_success;
+    return $res;
+}
+
+
 
 package main;
 use Data::Dumper;
 my $app_id   = "FBPerl";
 my $app_name = "FBPerlTest";
-
+#binmode STDOUT,':utf8';
 
 my $json=new FBOS::Client($app_id, $app_name);
 $json->connect;
-print Dumper $json->api_connection;
+#print Dumper $json->api_connection;
+#print Dumper $json->api_dl_stats;
+#print Dumper $json->api_fs_tasks;
+#print Dumper $json->api_ls_files("Disque dur");
+#$json->api_airmedia_receiver("start","video","http://anon.nasa-global.edgesuite.net/HD_downloads/GRAIL_launch_480.mov") and sleep 15 and $json->api_airmedia_receiver("stop","video");
+#$json->api_airmedia_receiver("start","photo","Disque dur/Photos/samsung GT-I9300/Camera/IMG_20140212_195511.jpg") and sleep 10 and $json->api_airmedia_receiver("stop","photo");
+#print Dumper $json->api_call_log;
+#$json->api_call_delete(400);
+#my $calls=$json->api_call_log ; $json->api_call_delete($_->{id}) for @$calls;
+#print Dumper $json->api_lan_browser("pub");
+print Dumper $json->api_lan_browser("pub/ether-98:4B:E1:95:AC:84");
