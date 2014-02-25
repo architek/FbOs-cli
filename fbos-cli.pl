@@ -10,14 +10,15 @@ use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
 use Storable;
 use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
-use MIME::Base64 qw/ encode_base64url decode_base64url encode_base64/; #TODO check
+use MIME::Base64 qw/ encode_base64url decode_base64url encode_base64 decode_base64 /;
 
 my $endpoint  = "http://mafreebox.freebox.fr";
 my $store     = "app_token";
 
+#Mutators
 BEGIN 
 {
-    my @attr = qw/ ua challenge track_id app_token auth_progress success api_success status error_code prefix app_id app_name/;
+    my @attr = qw/ ua challenge track_id app_token auth_progress success api_success status error_code error_msg prefix app_id app_name/;
     no strict 'refs';
     for my $m (@attr)
     {
@@ -56,7 +57,7 @@ sub POST {
 sub PUT {
     my ($self,$uri,$header,$content) = @_;
     $content = to_json($content) if defined $content;
-    my $req = HTTP::Request->new( "PUT", $self->prefix() . $uri, $header, $content);
+    my $req = HTTP::Request->new( "PUT", $self->get_prefix() . $uri, $header, $content);
     $req->content_length( length($content) ) if defined $content;
     my $res = $self->request($req);
     return $self->get_success() ? $self->decode_api_response( $res ) : undef;
@@ -64,7 +65,7 @@ sub PUT {
 
 sub DELETE {
     my ($self,$uri,$header) = @_;
-    my $req = HTTP::Request->new( "DELETE", $self->prefix() . $uri, $header);
+    my $req = HTTP::Request->new( "DELETE", $self->get_prefix() . $uri, $header);
     my $res = $self->request($req);
     return $self->get_success() ? $self->decode_api_response( $res ) : undef;
 }
@@ -177,8 +178,11 @@ sub set_session_token {
             password => hmac_sha1_hex( $self->get_challenge(), $self->get_app_token() )
         }
     );
-    die "Session Token" , $self->get_status() , "\n" unless $self->get_success();
-    die "Session Token" , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    if ($self->get_status() =~ m/403 Forbidden/) {
+        warn "Check your stored auth_token file '$store' and consider removing it to force requesting a new one\n";
+    }
+    die "Session Token " , $self->get_status() , "\n" unless $self->get_success();
+    die "Session Token " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
     $self->get_ua()->default_header( 'X-Fbx-App-Auth' => $res->{session_token} );
     return $res;
 }
@@ -217,11 +221,11 @@ sub api_fs_tasks {
 
 sub api_ls_files {
     my ($self, $path) = @_;
-    $path = encode_base64url( $path );
+    $path = encode_base64( $path );
     my $res = $self->GET("fs/ls/$path");
     die "LS Files " , $self->get_status() , "\n" unless $self->get_success();
     die "LS Files " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
-    $_->{path} = decode_base64url( $_->{path} ) for @$res;
+    $_->{path} = decode_base64( $_->{path}) for @$res;
     return $res;
 }
 
@@ -248,6 +252,7 @@ sub api_call_log {
     my $res = $self->GET("$url");
     die "Call Log " , $self->get_status() , "\n" unless $self->get_success();
     die "Call Log " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $_->{datetime} = scalar localtime ($_->{datetime}) for @$res;
     return $res;
 }
 
@@ -276,14 +281,14 @@ use Data::Dumper;
 
 my $fbc=new FBOS::Client("FBPerl", "FBPerlTest");
 $fbc->connect();
-#print Dumper $fbc->api_connection;
+print Dumper $fbc->api_connection;
 #print Dumper $fbc->api_dl_stats;
 #print Dumper $fbc->api_fs_tasks;
-#print Dumper $fbc->api_ls_files("Disque dur");
-#$fbc->api_airmedia_receiver("start","video","http://anon.nasa-global.edgesuite.net/HD_downloads/GRAIL_launch_480.mov") and sleep 15 and $json->api_airmedia_receiver("stop","video");
-#$fbc->api_airmedia_receiver("start","photo","Disque dur/Photos/samsung GT-I9300/Camera/IMG_20140212_195511.jpg") and sleep 10 and $json->api_airmedia_receiver("stop","photo");
+#print Dumper $fbc->api_ls_files("Disque dur/Photos/samsung GT-I9300/");
+#$fbc->api_airmedia_receiver("start","video","http://anon.nasa-global.edgesuite.net/HD_downloads/GRAIL_launch_480.mov") and sleep 9 and $fbc->api_airmedia_receiver("stop","video");
+#$fbc->api_airmedia_receiver("start","photo","Disque dur/Photos/samsung GT-I9300/Camera/IMG_20140212_195511.jpg") and sleep 4 and $fbc->api_airmedia_receiver("stop","photo");
 #print Dumper $fbc->api_call_log;
 #$fbc->api_call_delete(400);
-#my $calls=$fbc->api_call_log ; $json->api_call_delete($_->{id}) for @$calls;
+#my $calls=$fbc->api_call_log ; $fbc->api_call_delete($_->{id}) for @$calls;
 #print Dumper $fbc->api_lan_browser("pub");
-print Dumper $fbc->api_lan_browser("pub/ether-98:4B:E1:95:AC:84");
+#print Dumper $fbc->api_lan_browser("pub/ether-98:4B:E1:95:AC:84");
