@@ -4,7 +4,7 @@ use warnings;
 
 package FBOS::Client;
 
-my $VERSION = "0.3";
+my $VERSION = "0.4";
 
 use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
@@ -30,12 +30,39 @@ BEGIN
 sub new {
     my ($class, $app_id, $app_name) = @_;
     my $ua = LWP::UserAgent->new;
-    my $self={};
+    my $self = {};
     bless $self, $class;
     $self->set_ua($ua);
     $self->set_app_id($app_id);
     $self->set_app_name($app_name);
     return $self;
+}
+
+sub request {
+    my ($self, $req) = @_;
+    my $res  = $self->get_ua()->request($req);
+    $self->set_success($res->is_success());
+    $self->set_status($res->status_line);
+    return $res;
+}
+
+sub decode_json {
+    my ($self, $response) = @_;
+    #return from_json ( $response->decoded_content , {utf8 => 1});
+    return from_json ( $response->decoded_content );
+}
+
+sub api_version {
+    my $self = shift;
+    my $req  = HTTP::Request->new( "GET", $endpoint . "/api_version" );
+    my $res = $self->request($req);
+    if ( $self->get_success() ) {
+        my $res = $self->decode_json ( $res );
+        die "Can't get api version" unless exists $res->{api_version} and exists $res->{api_base_url};
+        my ($maj) = $res->{api_version} =~ /(\d*)\./;
+        $self->set_prefix( $endpoint . $res->{api_base_url} . "v" . $maj . "/" );
+    }
+    die "Api Version " , $self->get_status() , "\n" unless $self->get_success();
 }
 
 sub GET {
@@ -70,21 +97,6 @@ sub DELETE {
     return $self->get_success() ? $self->decode_api_response( $res ) : undef;
 }
 
-
-sub request {
-    my ($self, $req) = @_;
-    my $res  = $self->get_ua()->request($req);
-    $self->set_success($res->is_success());
-    $self->set_status($res->status_line);
-    return $res;
-}
-
-sub decode_json {
-    my ($self, $response) = @_;
-    #return from_json ( $response->decoded_content , {utf8 => 1});
-    return from_json ( $response->decoded_content );
-}
-
 sub decode_api_response {
     my ($self, $response) = @_;
     my $api_response = $self->decode_json ( $response );
@@ -96,19 +108,6 @@ sub decode_api_response {
         $self->set_error_msg( $api_response->{msg} );
         return undef;
     }
-}
-
-sub api_version {
-    my $self = shift;
-    my $req  = HTTP::Request->new( "GET", $endpoint . "/api_version" );
-    my $res = $self->request($req);
-    if ( $self->get_success() ) {
-        my $res = $self->decode_json ( $res );
-        die "Can't get api version" unless exists $res->{api_version} and exists $res->{api_base_url};
-        my ($maj) = $res->{api_version} =~ /(\d*)\./;
-        $self->set_prefix( $endpoint . $res->{api_base_url} . "v" . $maj . "/" );
-    }
-    die "Api Version " , $self->get_status() , "\n" unless $self->get_success();
 }
 
 sub login {
@@ -181,8 +180,7 @@ sub set_session_token {
     if ($self->get_status() =~ m/403 Forbidden/) {
         warn "Check your stored auth_token file '$store' and consider removing it to force requesting a new one\n";
     }
-    die "Session Token " , $self->get_status() , "\n" unless $self->get_success();
-    die "Session Token " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     $self->get_ua()->default_header( 'X-Fbx-App-Auth' => $res->{session_token} );
     return $res;
 }
@@ -194,28 +192,32 @@ sub connect {
     $self->set_session_token();
 }
 
+sub err_msg {
+    my $self = shift;
+    my $sn = +(caller(1))[3];
+    die "$sn: " , $self->get_status() , "\n" unless $self->get_success();
+    die "$sn: " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+}
+
 ############# API
 sub api_connection {
-    my $self=shift;
+    my $self = shift;
     my $res = $self->GET("connection/");
-    die "API Connection " , $self->get_status() , "\n" unless $self->get_success();
-    die "API Connection " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     return $res;
 }
 
 sub api_dl_stats {
-    my $self=shift;
+    my $self = shift;
     my $res = $self->GET("downloads/stats");
-    die "DL Stats " , $self->get_status() , "\n" unless $self->get_success();
-    die "DL Stats " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     return $res;
 }
 
 sub api_fs_tasks {
-    my $self=shift;
+    my $self = shift;
     my $res = $self->GET("fs/tasks");
-    die "FS Tasks " , $self->get_status() , "\n" unless $self->get_success();
-    die "FS Tasks " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     return $res;
 }
 
@@ -223,8 +225,7 @@ sub api_ls_files {
     my ($self, $path) = @_;
     $path = encode_base64( $path );
     my $res = $self->GET("fs/ls/$path");
-    die "LS Files " , $self->get_status() , "\n" unless $self->get_success();
-    die "LS Files " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     $_->{path} = decode_base64( $_->{path}) for @$res;
     return $res;
 }
@@ -241,8 +242,7 @@ sub api_airmedia_receiver {
             media => $media,
         }
     );
-    die "AirMedia Receiver " , $self->get_status() , "\n" unless $self->get_success();
-    die "AirMedia Receiver " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
 }
 
 sub api_call_log {
@@ -250,8 +250,7 @@ sub api_call_log {
     my $url = "call/log/";
     $url .= $id if defined $id;
     my $res = $self->GET("$url");
-    die "Call Log " , $self->get_status() , "\n" unless $self->get_success();
-    die "Call Log " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     $_->{datetime} = scalar localtime ($_->{datetime}) for @$res;
     return $res;
 }
@@ -259,8 +258,7 @@ sub api_call_log {
 sub api_call_delete {
     my ($self, $id) = @_;
     my $res = $self->DELETE("call/log/$id");
-    die "Call Delete " , $self->get_status() , "\n" unless $self->get_success();
-    die "Call Delete " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     return $res;
 }
 
@@ -269,19 +267,137 @@ sub api_lan_browser {
     my $url = "lan/browser/";
     $url .= defined $if ? "$if/" : "interfaces/";
     my $res = $self->GET($url);
-    die "Lan Browser " , $self->get_status() , "\n" unless $self->get_success();
-    die "Lan Browser " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    $self->err_msg();
     return $res;
 }
 
+sub api_freeplug {
+    my ($self) = @_;
+    my $res = $self->GET("freeplug");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dhcp_conf {
+    my ($self) = @_;
+    my $res = $self->GET("dhcp/config");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dhcp_static_lease {
+    my ($self, $id) = @_;
+    my $url = "dhcp/static_lease/";
+    $url .= $id if defined $id;
+    my $res = $self->GET($url);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dhcp_dynamic_lease {
+    my ($self) = @_;
+    my $res = $self->GET("dhcp/dynamic_lease");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_ftp_config {
+    my ($self) = @_;
+    my $res = $self->GET("ftp/config");
+    $self->err_msg();
+    return $res;
+}
+    
+sub api_ftp_set_config {
+    my ($self, $config) = @_;
+    my $res = $self->PUT("ftp/config", undef, $config);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_fw_redir {
+    my ($self, $id) = @_;
+    my $url = "fw/redir/";
+    $url .= $id if defined $id;
+    my $res = $self->GET($url);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_fw_set_redir {
+    my ($self, $content) = @_;
+    my $res = $self->POST("fw/redir/", undef, $content);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_fw_del_redir {
+    my ($self, $id) = @_;
+    my $res = $self->DELETE("fw/redir/$id");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_lcd_set_config {
+    my ($self, $content) = @_;
+    my $res = $self->PUT("lcd/config/", undef, $content);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_switch_status {
+    my ($self) = @_;
+    my $res = $self->GET("switch/status/");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_switch_port_stat {
+    my ($self, $id) = @_;
+    my $res = $self->GET("switch/port/$id/stats");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_status {
+    my ($self) = @_;
+    my $res = $self->GET("wifi");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_sta {
+    my ($self, $bss) = @_;
+    my $res = $self->GET("wifi/stations/$bss");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_system {
+    my ($self) = @_;
+    my $res = $self->GET("system");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_system_reboot {
+    my ($self) = @_;
+    my $res = $self->POST("system/reboot/",undef,undef);
+    $self->err_msg();
+    return $res;
+}
 
 package main;
 use Data::Dumper;
 #binmode STDOUT,':utf8';
+#
+#Examples:
+#
 
-my $fbc=new FBOS::Client("FBPerl", "FBPerlTest");
+my $fbc = new FBOS::Client("FBPerl", "FBPerlTest");
 $fbc->connect();
-print Dumper $fbc->api_connection;
+#print Dumper $fbc->api_connection;
+#print $fbc->api_connection->{ipv4} ,"\n";
 #print Dumper $fbc->api_dl_stats;
 #print Dumper $fbc->api_fs_tasks;
 #print Dumper $fbc->api_ls_files("Disque dur/Photos/samsung GT-I9300/");
@@ -289,6 +405,22 @@ print Dumper $fbc->api_connection;
 #$fbc->api_airmedia_receiver("start","photo","Disque dur/Photos/samsung GT-I9300/Camera/IMG_20140212_195511.jpg") and sleep 4 and $fbc->api_airmedia_receiver("stop","photo");
 #print Dumper $fbc->api_call_log;
 #$fbc->api_call_delete(400);
-#my $calls=$fbc->api_call_log ; $fbc->api_call_delete($_->{id}) for @$calls;
+#my $calls = $fbc->api_call_log ; $fbc->api_call_delete($_->{id}) for @$calls;
 #print Dumper $fbc->api_lan_browser("pub");
 #print Dumper $fbc->api_lan_browser("pub/ether-98:4B:E1:95:AC:84");
+#print Dumper $fbc->api_freeplug;
+#print Dumper $fbc->api_dhcp_conf;
+#print Dumper $fbc->api_dhcp_static_lease("00:13:10:30:21:97");
+#for (@{$fbc->api_dhcp_dynamic_lease}) { print Dumper $_ if $_->{ip} eq "192.168.1.27" }
+#print Dumper $fbc->api_ftp_config;
+#$fbc->api_ftp_set_config({enabled=>\0});
+#print Dumper $fbc->api_fw_redir();
+#$fbc->api_fw_add_redir( { enabled        => \1, comment        => "test", lan_port       => 4242, wan_port_end   => 4242,
+#    wan_port_start => 4242, lan_ip         => "192.168.1.42", ip_proto       => "tcp", src_ip         =>  "0.0.0.0" });
+#$fbc->api_fw_del_redir(1);
+#$fbc->api_lcd_set_config({brightness=>$_%100}) for (-50..50);
+#print Dumper $fbc->api_switch_status;
+#print Dumper $fbc->api_switch_port_stat(2);
+#print Dumper $fbc->api_wifi_status;
+#print Dumper $fbc->api_wifi_sta("perso");
+#$fbc->api_system_reboot;
