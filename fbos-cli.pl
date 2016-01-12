@@ -4,7 +4,7 @@ use warnings;
 
 package FBOS::Client;
 
-my $VERSION = "0.4";
+my $VERSION = "0.5";
 
 use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
@@ -145,8 +145,9 @@ sub app_token {
     } else {
         my $auth_progress;
         $app_token = $self->login();
-        warn "Please confirm on the freebox\n";
+		$self->set_track_id( $app_token->{track_id} );
         do {
+			warn "Please confirm on the freebox\n";
             sleep 1;
             $self->auth_progress();
         } while ( $self->get_auth_progress() eq "pending" );
