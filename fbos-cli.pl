@@ -314,7 +314,7 @@ sub api_dhcp_update_static_lease {
     my ($self, $config, $id) = @_;
     my $url = "dhcp/static_lease/";
     $url .= $id if defined $id;
-    my $res = $self->PUT($url, undef, $content);
+    my $res = $self->PUT($url, undef, $config);
     $self->err_msg();
     return $res;
 }
