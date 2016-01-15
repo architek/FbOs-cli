@@ -310,6 +310,15 @@ sub api_set_dhcp_static_lease {
     return $res;
 }
 
+sub api_update_dhcp_static_lease {
+    my ($self, $config, $id) = @_;
+    my $url = "dhcp/static_lease/";
+    $url .= $id if defined $id;
+    my $res = $self->PUT($url, undef, $content);
+    $self->err_msg();
+    return $res;
+}
+
 sub api_ftp_config {
     my ($self) = @_;
     my $res = $self->GET("ftp/config");
