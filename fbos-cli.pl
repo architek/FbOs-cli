@@ -429,6 +429,8 @@ $fbc->connect();
 #print Dumper $fbc->api_freeplug;
 #print Dumper $fbc->api_dhcp_conf;
 #print Dumper $fbc->api_dhcp_static_lease("00:13:10:30:21:97");
+#print Dumper $fbc->api_dhcp_update_static_lease( { comment => "Mon PC" }, "CA:FE:FA:DA:FA:DA" );
+#print Dumper $fbc->api_dhcp_set_static_lease( { ip => "192.168.1.200" , mac => "00:DE:AD:B0:0B:55" } );
 #for (@{$fbc->api_dhcp_dynamic_lease}) { print Dumper $_ if $_->{ip} eq "192.168.1.27" }
 #print Dumper $fbc->api_ftp_config;
 #$fbc->api_ftp_set_config({enabled=>\0});
