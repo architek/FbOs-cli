@@ -303,10 +303,9 @@ sub api_dhcp_dynamic_lease {
 }
 
 sub api_set_dhcp_static_lease {
-    my ($self, $config, $id) = @_;
+    my ($self, $content) = @_;
     my $url = "dhcp/static_lease/";
-    $url .= $id if defined $id;
-    my $res = $self->PUT($url, undef, $config);
+    my $res = $self->POST($url, undef, $content);
     $self->err_msg();
     return $res;
 }
