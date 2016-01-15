@@ -4,7 +4,7 @@ use warnings;
 
 package FBOS::Client;
 
-my $VERSION = "0.5";
+my $VERSION = "0.6";
 
 use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
