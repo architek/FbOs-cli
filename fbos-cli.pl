@@ -377,16 +377,46 @@ sub api_switch_port_stat {
     return $res;
 }
 
-sub api_wifi_status {
+sub api_wifi_config {
     my ($self) = @_;
-    my $res = $self->GET("wifi");
+    my $res = $self->GET("wifi/config");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_ap {
+    my ($self, $ap) = @_;
+    $ap = defined($ap) ? "/$ap" : ""; 
+    my $res = $self->GET("wifi/ap" . $ap);
     $self->err_msg();
     return $res;
 }
 
 sub api_wifi_sta {
+    my ($self, $ap) = @_;
+    my $res = $self->GET("wifi/ap/$ap/stations");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_bss {
     my ($self, $bss) = @_;
-    my $res = $self->GET("wifi/stations/$bss");
+    $bss = defined($bss) ? "/$bss" : ""; 
+    my $res = $self->GET("wifi/bss" . $bss);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_ap_neigh {
+    my ($self, $ap) = @_;
+    my $res = $self->GET("wifi/ap/$ap/neighbors");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_wifi_ap_chanuse {
+    my ($self, $ap) = @_;
+    my $res = $self->GET("wifi/ap/$ap/channel_usage");
     $self->err_msg();
     return $res;
 }
@@ -441,6 +471,15 @@ $fbc->connect();
 #$fbc->api_lcd_set_config({brightness=>$_%100}) for (-50..50);
 #print Dumper $fbc->api_switch_status;
 #print Dumper $fbc->api_switch_port_stat(2);
-#print Dumper $fbc->api_wifi_status;
-#print Dumper $fbc->api_wifi_sta("perso");
+#print Dumper $fbc->api_wifi_config;
+#print Dumper $fbc->api_wifi_ap;
+#print Dumper $fbc->api_wifi_ap(0);
+#print Dumper $fbc->api_wifi_sta(0)->[0];
+#print "$_->{hostname}\n" for @{ $fbc->api_wifi_sta(0) };
+#print Dumper $fbc->api_wifi_bss;
+#print "Your key is <", $fbc->api_wifi_bss("B0:0B:FA:DA:B0:0B")->{config}{key}, ">\n";
+#print "SSID;Chan;802.11n;band;chan width;sec chan;signal\n", join ("\n", map { join(";", $_->{ssid} , $_->{channel}, $_->{capabilities}{ht}, $_->{band}, $_->{channel_width}, $_->{secondary_channel}, $_->{signal} ) } @{ $fbc->api_wifi_ap_neigh(0) } ), "\n";
+#print join("\n", map { $_->{channel} } sort {$a->{noise_level}<=>$b->{noise_level}} $fbc->api_wifi_ap_chanuse(0) );
+#print $_->{channel} for @{ sort { $a->{noise_level} <=> $b->{noise_level} }  $fbc->api_wifi_ap_chanuse(0) };
+#print "Less noisy channel is ", +(map { $_->{channel} } sort { $a->{noise_level} <=> $b->{noise_level} } @{ $fbc->api_wifi_ap_chanuse(0) })[0], "\n";
 #$fbc->api_system_reboot;
