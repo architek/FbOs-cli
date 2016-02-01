@@ -4,7 +4,7 @@ use warnings;
 
 package FBOS::Client;
 
-my $VERSION = "0.7";
+my $VERSION = "0.8";
 
 use LWP::UserAgent;
 use JSON qw/ from_json to_json /;
@@ -399,6 +399,13 @@ sub api_wifi_sta {
     return $res;
 }
 
+sub api_wifi_allowed_comb {
+    my ($self, $ap) = @_;
+    my $res = $self->GET("wifi/ap/$ap/allowed_channel_comb");
+    $self->err_msg();
+    return $res;
+}
+
 sub api_wifi_bss {
     my ($self, $bss) = @_;
     $bss = defined($bss) ? "/$bss" : ""; 
@@ -482,4 +489,5 @@ $fbc->connect();
 #print join("\n", map { $_->{channel} } sort {$a->{noise_level}<=>$b->{noise_level}} $fbc->api_wifi_ap_chanuse(0) );
 #print $_->{channel} for @{ sort { $a->{noise_level} <=> $b->{noise_level} }  $fbc->api_wifi_ap_chanuse(0) };
 #print "Less noisy channel is ", +(map { $_->{channel} } sort { $a->{noise_level} <=> $b->{noise_level} } @{ $fbc->api_wifi_ap_chanuse(0) })[0], "\n";
+#print Dumper [ grep { $_->{channel_width} == 40 } @{ $fbc->api_wifi_allowed_comb(0) } ];
 #$fbc->api_system_reboot;
