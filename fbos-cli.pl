@@ -208,6 +208,27 @@ sub api_connection {
     return $res;
 }
 
+sub api_connection_config {
+    my $self = shift;
+    my $res = $self->GET("connection/config");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_connection_xdsl {
+    my $self = shift;
+    my $res = $self->GET("connection/xdsl");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_connection_ftth {
+    my $self = shift;
+    my $res = $self->GET("connection/xdsl");
+    $self->err_msg();
+    return $res;
+}
+
 sub api_dl_stats {
     my $self = shift;
     my $res = $self->GET("downloads/stats");
@@ -452,6 +473,9 @@ use Data::Dumper;
 my $fbc = new FBOS::Client("FBPerl", "FBPerlTest");
 $fbc->connect();
 #print Dumper $fbc->api_connection;
+#print Dumper $fbc->api_connection_config;
+#print Dumper $fbc->api_connection_xdsl;
+#print Dumper $fbc->api_connection_ftth;
 #print $fbc->api_connection->{ipv4} ,"\n";
 #print Dumper $fbc->api_dl_stats;
 #print Dumper $fbc->api_fs_tasks;
