@@ -463,6 +463,76 @@ sub api_system_reboot {
     return $res;
 }
 
+sub api_dl_tasks {
+    my ($self) = @_;
+    my $res = $self->GET("downloads/",undef,undef);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task {
+    my ($self, $id) = @_;
+    my $res = $self->GET("downloads/$id");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_delete {
+    my ($self, $id) = @_;
+    my $res = $self->DELETE("downloads/$id");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_erase {
+    my ($self, $id) = @_;
+    my $res = $self->DELETE("downloads/$id/erase");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_log {
+    my ($self, $id) = @_;
+    my $res = $self->GET("downloads/$id/log");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_files {
+    my ($self, $id) = @_;
+    my $res = $self->GET("downloads/$id/files");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_trackers {
+    my ($self, $id) = @_;
+    my $res = $self->GET("downloads/$id/trackers");
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_add_tracker {
+    my ($self, $id, $tracker) = @_;
+    my $res = $self->POST("downloads/$id/trackers", undef, $tracker);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_update_tracker {
+    my ($self, $id, $announce, $tracker) = @_;
+    my $res = $self->PUT("downloads/$id/trackers/$announce", undef, $tracker);
+    $self->err_msg();
+    return $res;
+}
+
+sub api_dl_task_remove_tracker {
+    my ($self, $id, $announce, $tracker) = @_;
+    my $res = $self->DELETE("downloads/$id/trackers/$announce", undef, $tracker);
+    $self->err_msg();
+    return $res;
+}
+
 package main;
 use Data::Dumper;
 #binmode STDOUT,':utf8';
