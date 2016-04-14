@@ -113,7 +113,9 @@ sub login {
     my $res = $self->POST("login/authorize/", undef, {
         app_id      => $self->get_app_id(),
         app_name    => $self->get_app_name(),
-        app_version => $VERSION,
+#To avoid having to add again permissions on the freebox web interface, this is fixed
+        #app_version => $VERSION,
+        app_version => '0.4',
         device_name => "debian",
         permissions => {
             downloader => "true", parental   => "true", explorer   => "true",
