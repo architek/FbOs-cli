@@ -142,12 +142,12 @@ sub app_token {
 
     if (-f $store) {
         $app_token = retrieve $store or die "Couldn't restore application token from file found $store\n";
-    } else {
+    } else { 
         my $auth_progress;
         $app_token = $self->login();
-		$self->set_track_id( $app_token->{track_id} );
+	$self->set_track_id( $app_token->{track_id} );
         do {
-			warn "Please confirm on the freebox\n";
+            warn "Please confirm on the freebox\n";
             sleep 1;
             $self->auth_progress();
         } while ( $self->get_auth_progress() eq "pending" );
@@ -196,8 +196,8 @@ sub connect {
 sub err_msg {
     my $self = shift;
     my $sn = +(caller(1))[3];
-    die "$sn: " , $self->get_status() , "\n" unless $self->get_success();
-    die "$sn: " , $self->get_error_msg() , "[", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
+    die "HTTP ERROR : $sn: " , $self->get_status() , "\n" unless $self->get_success();
+    die "API ERROR : $sn: " , $self->get_error_msg() , " [", $self->get_error_code(), "]", "\n" unless $self->get_api_success();
 }
 
 ############# API
@@ -224,7 +224,7 @@ sub api_connection_xdsl {
 
 sub api_connection_ftth {
     my $self = shift;
-    my $res = $self->GET("connection/xdsl");
+    my $res = $self->GET("connection/ftth");
     $self->err_msg();
     return $res;
 }
