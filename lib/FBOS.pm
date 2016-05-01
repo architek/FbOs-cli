@@ -142,10 +142,10 @@ sub app_token {
 
     if (-f $store) {
         $app_token = retrieve $store or die "Couldn't restore application token from file found $store\n";
-    } else { 
+    } else {
         my $auth_progress;
         $app_token = $self->login();
-	$self->set_track_id( $app_token->{track_id} );
+        $self->set_track_id( $app_token->{track_id} );
         do {
             warn "Please confirm on the freebox\n";
             sleep 1;
